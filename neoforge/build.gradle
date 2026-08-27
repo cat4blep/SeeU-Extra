@@ -5,7 +5,7 @@ plugins {
 }
 
 base {
-    archivesName = "seeu-extra-neoforge"
+    archivesName = "seeu-extra-neoforge-1.21.1"
 }
 
 sourceSets.main.java.srcDir(project(":common").file("src/client/java"))
@@ -60,7 +60,6 @@ tasks.named("sourcesJar") {
 dependencies {
     implementation project(":common")
     compileOnly "dev.keryeshka.seeu:seeu-addon-api:${project.seeu_release_tag}@jar"
-    compileOnly "io.netty:netty-buffer:${project.netty_version}"
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
@@ -72,7 +71,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             neo_version_range      : project.neo_version_range,
             mod_id                 : "seeu_extra",
             mod_name               : "SeeU Extra",
-            mod_license            : "LicenseRef-SeeU-Restricted-1.0",
+            mod_license            : "MIT",
             mod_version            : project.seeu_extra_version,
     ]
     inputs.properties replaceProperties

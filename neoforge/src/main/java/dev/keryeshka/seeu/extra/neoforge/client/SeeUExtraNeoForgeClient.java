@@ -13,7 +13,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
-import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.minecraft.client.Minecraft;
 
 @Mod(value = SeeUExtra.MOD_ID, dist = Dist.CLIENT)
 @EventBusSubscriber(modid = SeeUExtra.MOD_ID, value = Dist.CLIENT)
@@ -44,15 +45,19 @@ public final class SeeUExtraNeoForgeClient {
     }
 
     @SubscribeEvent
-    public static void onRenderLevel(SubmitCustomGeometryEvent event) {
-        if (renderer == null) {
+    public static void onRenderLevel(RenderLevelStageEvent event) {
+        if (renderer == null || event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) {
             return;
         }
+        var consumers = Minecraft.getInstance().renderBuffers().bufferSource();
         renderer.render(
                 event.getPoseStack(),
-                event.getLevelRenderState(),
-                event.getSubmitNodeCollector()
+                consumers,
+                event.getCamera().getPosition(),
+                event.getFrustum(),
+                event.getPartialTick().getGameTimeDeltaPartialTick(false)
         );
+        consumers.endBatch();
     }
 
     private static void clear() {

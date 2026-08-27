@@ -9,7 +9,7 @@ import dev.keryeshka.seeu.extra.protocol.ExtraPacketCodec;
 import dev.keryeshka.voxyseeu.api.addon.SeeUClientAddons;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.fabricmc.loader.api.FabricLoader;
 
 public final class SeeUExtraFabricClient implements ClientModInitializer {
@@ -27,10 +27,17 @@ public final class SeeUExtraFabricClient implements ClientModInitializer {
         );
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> endpoint.clear());
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> endpoint.clear());
-        LevelRenderEvents.COLLECT_SUBMITS.register(context -> renderer.render(
-                context.poseStack(),
-                context.levelState(),
-                context.submitNodeCollector()
-        ));
+        WorldRenderEvents.AFTER_ENTITIES.register(context -> {
+            if (context.matrixStack() == null || context.consumers() == null) {
+                return;
+            }
+            renderer.render(
+                    context.matrixStack(),
+                    context.consumers(),
+                    context.camera().getPosition(),
+                    context.frustum(),
+                    context.tickCounter().getGameTimeDeltaPartialTick(false)
+            );
+        });
     }
 }

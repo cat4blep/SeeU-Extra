@@ -8,7 +8,7 @@ import dev.keryeshka.seeu.extra.protocol.EntitySnapshot;
 import dev.keryeshka.seeu.extra.protocol.EntitySnapshotPacket;
 import dev.keryeshka.seeu.extra.protocol.EquipmentSnapshot;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -86,7 +86,7 @@ public final class ExtraEntityBroadcaster {
             SpatialCellIndex<EntityCandidate> candidates = scanLevel(server, level, selector);
             Map<UUID, EntitySnapshot> snapshotCache = new HashMap<>();
             Set<UUID> failedSnapshots = new HashSet<>();
-            String dimensionKey = level.dimension().identifier().toString();
+            String dimensionKey = level.dimension().location().toString();
             for (ExtraViewerSession session : entry.getValue()) {
                 sendSnapshot(
                         server,
@@ -114,7 +114,7 @@ public final class ExtraEntityBroadcaster {
             if (player == null || player.isRemoved()) {
                 continue;
             }
-            ServerLevel level = player.level();
+            ServerLevel level = player.serverLevel();
             grouped.computeIfAbsent(level, ignored -> new ArrayList<>()).add(session);
         }
         return grouped;
@@ -131,7 +131,7 @@ public final class ExtraEntityBroadcaster {
                 continue;
             }
 
-            Identifier typeIdentifier = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
+            ResourceLocation typeIdentifier = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
             if (typeIdentifier == null) {
                 continue;
             }
@@ -219,8 +219,8 @@ public final class ExtraEntityBroadcaster {
                     true,
                     snapshots
             ));
-        } catch (RuntimeException exception) {
-            LOGGER.warn("Failed to send an entity snapshot to {}", viewer.getGameProfile().name(), exception);
+        } catch (RuntimeException | LinkageError failure) {
+            LOGGER.warn("Failed to send an entity snapshot to {}", viewer.getGameProfile().getName(), failure);
         }
     }
 
@@ -347,7 +347,7 @@ public final class ExtraEntityBroadcaster {
                 entity.getX(),
                 entity.getY(),
                 entity.getZ(),
-                entity.getPreciseBodyRotation(1.0F),
+                living == null ? entity.getYRot() : living.yBodyRot,
                 entity.getYHeadRot(),
                 entity.getXRot(),
                 velocity.x,
@@ -402,7 +402,7 @@ public final class ExtraEntityBroadcaster {
         if (stack.isEmpty()) {
             return EquipmentSnapshot.EMPTY;
         }
-        Identifier itemIdentifier = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        ResourceLocation itemIdentifier = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (itemIdentifier == null) {
             return EquipmentSnapshot.EMPTY;
         }

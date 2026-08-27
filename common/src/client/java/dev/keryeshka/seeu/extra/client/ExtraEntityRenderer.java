@@ -8,14 +8,13 @@ import dev.keryeshka.seeu.extra.protocol.EquipmentSnapshot;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
-import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -42,6 +41,7 @@ public final class ExtraEntityRenderer {
     private final SeeUExtraClientConfig config;
     private final Map<UUID, ProxyEntry> proxies = new HashMap<>();
     private final Set<String> quarantinedTypes = new HashSet<>();
+    private final Set<UUID> realEntityUuids = new HashSet<>();
     private long frame;
 
     public ExtraEntityRenderer(ExtraEntityTracker tracker, SeeUExtraClientConfig config) {
@@ -52,13 +52,16 @@ public final class ExtraEntityRenderer {
     public void clear() {
         proxies.clear();
         quarantinedTypes.clear();
+        realEntityUuids.clear();
         frame = 0;
     }
 
     public void render(
             PoseStack poseStack,
-            LevelRenderState levelRenderState,
-            SubmitNodeCollector submitNodeCollector
+            MultiBufferSource consumers,
+            Vec3 cameraPosition,
+            Frustum frustum,
+            float partialTick
     ) {
         Minecraft minecraft = Minecraft.getInstance();
         ClientLevel level = minecraft.level;
@@ -68,7 +71,7 @@ public final class ExtraEntityRenderer {
             proxies.clear();
             return;
         }
-        if (!level.dimension().identifier().toString().equals(tracker.dimensionKey())) {
+        if (!level.dimension().location().toString().equals(tracker.dimensionKey())) {
             proxies.clear();
             return;
         }
@@ -77,10 +80,11 @@ public final class ExtraEntityRenderer {
         long now = System.nanoTime();
         double minimumDistanceSquared = square(offer.minimumDistanceBlocks());
         double maximumDistanceSquared = square(offer.maximumDistanceBlocks());
-        Vec3 cameraPosition = minecraft.gameRenderer.mainCamera().position();
         EntityRenderDispatcher dispatcher = minecraft.getEntityRenderDispatcher();
-        float partialTick = minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        Frustum frustum = levelRenderState.cameraRenderState.cullFrustum;
+        realEntityUuids.clear();
+        for (Entity entity : level.entitiesForRendering()) {
+            realEntityUuids.add(entity.getUUID());
+        }
 
         for (TrackedExtraEntity tracked : tracker.entities()) {
             InterpolatedEntityState state = tracked.sample(now);
@@ -89,7 +93,7 @@ public final class ExtraEntityRenderer {
             if (distanceSquared < minimumDistanceSquared || distanceSquared > maximumDistanceSquared) {
                 continue;
             }
-            if (level.getEntity(snapshot.uuid()) != null) {
+            if (realEntityUuids.contains(snapshot.uuid())) {
                 proxies.remove(snapshot.uuid());
                 continue;
             }
@@ -120,17 +124,23 @@ public final class ExtraEntityRenderer {
                     continue;
                 }
 
-                var renderState = dispatcher.extractEntity(proxy.entity, partialTick);
                 Vec3 position = state.position();
-                dispatcher.submit(
-                        renderState,
-                        levelRenderState.cameraRenderState,
-                        position.x - cameraPosition.x,
-                        position.y - cameraPosition.y,
-                        position.z - cameraPosition.z,
-                        poseStack,
-                        submitNodeCollector
-                );
+                poseStack.pushPose();
+                try {
+                    dispatcher.render(
+                            proxy.entity,
+                            position.x - cameraPosition.x,
+                            position.y - cameraPosition.y,
+                            position.z - cameraPosition.z,
+                            state.bodyYaw(),
+                            partialTick,
+                            poseStack,
+                            consumers,
+                            LightTexture.FULL_BRIGHT
+                    );
+                } finally {
+                    poseStack.popPose();
+                }
             } catch (RuntimeException | LinkageError failure) {
                 quarantine(snapshot.typeId(), failure);
             }
@@ -140,15 +150,15 @@ public final class ExtraEntityRenderer {
     }
 
     private ProxyEntry createProxy(ClientLevel level, EntitySnapshot snapshot) {
-        Identifier identifier = Identifier.tryParse(snapshot.typeId());
+        ResourceLocation identifier = ResourceLocation.tryParse(snapshot.typeId());
         if (identifier == null || !BuiltInRegistries.ENTITY_TYPE.containsKey(identifier)) {
             throw new IllegalArgumentException("Client registry has no entity type " + snapshot.typeId());
         }
-        EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.getValue(identifier);
+        EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.get(identifier);
         if (entityType == null) {
             throw new IllegalArgumentException("Client registry returned no entity type " + snapshot.typeId());
         }
-        Entity entity = entityType.create(level, EntitySpawnReason.LOAD);
+        Entity entity = entityType.create(level);
         if (entity == null) {
             throw new IllegalStateException("Entity type returned no proxy for " + snapshot.typeId());
         }
@@ -162,22 +172,22 @@ public final class ExtraEntityRenderer {
 
     private static void applyPosition(Entity entity, InterpolatedEntityState state) {
         Vec3 position = state.position();
-        entity.setOldPosAndRot(position, state.bodyYaw(), state.pitch());
+        entity.setOldPosAndRot();
         entity.xo = position.x;
         entity.yo = position.y;
         entity.zo = position.z;
         entity.xOld = position.x;
         entity.yOld = position.y;
         entity.zOld = position.z;
-        entity.snapTo(position, state.bodyYaw(), state.pitch());
+        entity.moveTo(position.x, position.y, position.z, state.bodyYaw(), state.pitch());
         entity.setYRot(state.bodyYaw());
         entity.yRotO = state.bodyYaw();
         entity.setXRot(state.pitch());
         entity.xRotO = state.pitch();
-        entity.setYBodyRot(state.bodyYaw());
-        entity.setYHeadRot(state.headYaw());
         if (entity instanceof LivingEntity living) {
+            living.setYBodyRot(state.bodyYaw());
             living.yBodyRotO = state.bodyYaw();
+            living.setYHeadRot(state.headYaw());
             living.yHeadRotO = state.headYaw();
         }
         entity.tickCount = state.age();
@@ -209,11 +219,11 @@ public final class ExtraEntityRenderer {
         if (equipment.isEmpty()) {
             return ItemStack.EMPTY;
         }
-        Identifier identifier = Identifier.tryParse(equipment.itemId());
+        ResourceLocation identifier = ResourceLocation.tryParse(equipment.itemId());
         if (identifier == null || !BuiltInRegistries.ITEM.containsKey(identifier)) {
             return ItemStack.EMPTY;
         }
-        Item item = BuiltInRegistries.ITEM.getValue(identifier);
+        Item item = BuiltInRegistries.ITEM.get(identifier);
         return item == null ? ItemStack.EMPTY : new ItemStack(item, equipment.count());
     }
 
