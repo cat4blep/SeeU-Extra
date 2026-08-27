@@ -1,10 +1,8 @@
-![SeeU Extra](docs/banner.png)
-
 # SeeU Extra
 
 SeeU Extra renders configured non-player entities beyond vanilla tracking distance through [SeeU](https://github.com/cat4blep/SeeU). It supports Fabric and NeoForge modded servers. Paper remains player-only.
 
-Install matching SeeU and SeeU Extra builds on the server and every client. SeeU Extra 0.1.0 requires SeeU 0.9.0 or later in the 0.x line. Downloads are available on the [releases page](https://github.com/cat4blep/SeeU-Extra/releases).
+Install matching SeeU and SeeU Extra builds on the server and every client. SeeU Extra 0.1.1 requires SeeU 0.9.1 or later in the 0.x line. Downloads are available on the [releases page](https://github.com/cat4blep/SeeU-Extra/releases).
 
 ## Configuration
 
@@ -50,4 +48,4 @@ The client creates `config/seeu-extra-client.json` with its enable switch and di
 
 ## License
 
-SeeU Extra 0.1.0 for Minecraft 1.21.11 declares the MIT license in its loader metadata.
+See [LICENSE](LICENSE).
