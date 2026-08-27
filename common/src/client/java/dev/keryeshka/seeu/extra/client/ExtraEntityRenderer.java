@@ -43,6 +43,7 @@ public final class ExtraEntityRenderer {
     private final Map<UUID, ProxyEntry> proxies = new HashMap<>();
     private final Set<String> quarantinedTypes = new HashSet<>();
     private long frame;
+    private boolean loggedFirstSubmission;
 
     public ExtraEntityRenderer(ExtraEntityTracker tracker, SeeUExtraClientConfig config) {
         this.tracker = tracker;
@@ -53,6 +54,7 @@ public final class ExtraEntityRenderer {
         proxies.clear();
         quarantinedTypes.clear();
         frame = 0;
+        loggedFirstSubmission = false;
     }
 
     public void render(
@@ -110,13 +112,7 @@ public final class ExtraEntityRenderer {
                     proxy.appliedRevision = state.revision();
                 }
 
-                if (frustum != null && !dispatcher.shouldRender(
-                        proxy.entity,
-                        frustum,
-                        cameraPosition.x,
-                        cameraPosition.y,
-                        cameraPosition.z
-                )) {
+                if (!shouldRenderWithoutVanillaDistanceLimit(dispatcher, proxy.entity, frustum)) {
                     continue;
                 }
 
@@ -131,12 +127,33 @@ public final class ExtraEntityRenderer {
                         poseStack,
                         submitNodeCollector
                 );
+                if (!loggedFirstSubmission) {
+                    LOGGER.info(
+                            "Submitted first SeeU Extra proxy: type={}, distance={}",
+                            snapshot.typeId(),
+                            Math.round(Math.sqrt(distanceSquared))
+                    );
+                    loggedFirstSubmission = true;
+                }
             } catch (RuntimeException | LinkageError failure) {
                 quarantine(snapshot.typeId(), failure);
             }
         }
 
         proxies.values().removeIf(proxy -> proxy.lastSeenFrame != currentFrame);
+    }
+
+    private static boolean shouldRenderWithoutVanillaDistanceLimit(
+            EntityRenderDispatcher dispatcher,
+            Entity entity,
+            Frustum frustum
+    ) {
+        if (frustum == null) {
+            return true;
+        }
+        // Use the proxy as the culling origin to bypass Entity's vanilla distance limit while retaining
+        // renderer-specific frustum, bounding-box, and leash culling.
+        return dispatcher.shouldRender(entity, frustum, entity.getX(), entity.getY(), entity.getZ());
     }
 
     private ProxyEntry createProxy(ClientLevel level, EntitySnapshot snapshot) {
