@@ -339,6 +339,7 @@ public final class ExtraEntityBroadcaster {
     private static EntitySnapshot createSnapshot(EntityCandidate candidate) {
         Entity entity = candidate.entity();
         Vec3 velocity = entity.getDeltaMovement();
+        double verticalVelocity = SnapshotVelocity.vertical(velocity.y, entity.onGround());
         LivingEntity living = entity instanceof LivingEntity value ? value : null;
         int flags = flags(entity, living);
         return new EntitySnapshot(
@@ -351,7 +352,7 @@ public final class ExtraEntityBroadcaster {
                 entity.getYHeadRot(),
                 entity.getXRot(),
                 velocity.x,
-                velocity.y,
+                verticalVelocity,
                 velocity.z,
                 entity.tickCount,
                 entity.getPose().name(),
