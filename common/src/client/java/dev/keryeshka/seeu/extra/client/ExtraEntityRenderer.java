@@ -77,7 +77,7 @@ public final class ExtraEntityRenderer {
         long now = System.nanoTime();
         double minimumDistanceSquared = square(offer.minimumDistanceBlocks());
         double maximumDistanceSquared = square(offer.maximumDistanceBlocks());
-        Vec3 cameraPosition = minecraft.gameRenderer.mainCamera().position();
+        Vec3 cameraPosition = minecraft.gameRenderer.getMainCamera().position();
         EntityRenderDispatcher dispatcher = minecraft.getEntityRenderDispatcher();
         float partialTick = minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
         Frustum frustum = levelRenderState.cameraRenderState.cullFrustum;

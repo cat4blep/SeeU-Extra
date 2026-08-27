@@ -7,7 +7,7 @@
   "authors": [
     "Keryesh4ka"
   ],
-  "license": "LicenseRef-SeeU-Restricted-1.0",
+  "license": "MIT",
   "environment": "*",
   "entrypoints": {
     "main": [
