@@ -11,7 +11,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
-import net.minecraft.client.renderer.state.level.LevelRenderState;
+import net.minecraft.client.renderer.state.LevelRenderState;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -42,6 +42,7 @@ public final class ExtraEntityRenderer {
     private final SeeUExtraClientConfig config;
     private final Map<UUID, ProxyEntry> proxies = new HashMap<>();
     private final Set<String> quarantinedTypes = new HashSet<>();
+    private Frustum frustum;
     private long frame;
 
     public ExtraEntityRenderer(ExtraEntityTracker tracker, SeeUExtraClientConfig config) {
@@ -52,7 +53,12 @@ public final class ExtraEntityRenderer {
     public void clear() {
         proxies.clear();
         quarantinedTypes.clear();
+        frustum = null;
         frame = 0;
+    }
+
+    public void updateFrustum(Frustum frustum) {
+        this.frustum = frustum;
     }
 
     public void render(
@@ -64,7 +70,7 @@ public final class ExtraEntityRenderer {
         ClientLevel level = minecraft.level;
         LocalPlayer viewer = minecraft.player;
         ClientOffer offer = config.offer();
-        if (!offer.enabled() || level == null || viewer == null) {
+        if (!offer.enabled() || level == null || viewer == null || submitNodeCollector == null) {
             proxies.clear();
             return;
         }
@@ -77,10 +83,10 @@ public final class ExtraEntityRenderer {
         long now = System.nanoTime();
         double minimumDistanceSquared = square(offer.minimumDistanceBlocks());
         double maximumDistanceSquared = square(offer.maximumDistanceBlocks());
-        Vec3 cameraPosition = minecraft.gameRenderer.mainCamera().position();
+        Vec3 cameraPosition = minecraft.gameRenderer.getMainCamera().position();
         EntityRenderDispatcher dispatcher = minecraft.getEntityRenderDispatcher();
         float partialTick = minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        Frustum frustum = levelRenderState.cameraRenderState.cullFrustum;
+        Frustum currentFrustum = frustum;
 
         for (TrackedExtraEntity tracked : tracker.entities()) {
             InterpolatedEntityState state = tracked.sample(now);
@@ -110,13 +116,7 @@ public final class ExtraEntityRenderer {
                     proxy.appliedRevision = state.revision();
                 }
 
-                if (frustum != null && !dispatcher.shouldRender(
-                        proxy.entity,
-                        frustum,
-                        cameraPosition.x,
-                        cameraPosition.y,
-                        cameraPosition.z
-                )) {
+                if (currentFrustum != null && !currentFrustum.isVisible(proxy.entity.getBoundingBox())) {
                     continue;
                 }
 

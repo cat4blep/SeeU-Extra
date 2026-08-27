@@ -5,7 +5,7 @@ plugins {
 }
 
 base {
-    archivesName = "seeu-extra-neoforge"
+    archivesName = "seeu-extra-neoforge-1.21.11"
 }
 
 sourceSets.main.java.srcDir(project(":common").file("src/client/java"))
@@ -72,7 +72,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             neo_version_range      : project.neo_version_range,
             mod_id                 : "seeu_extra",
             mod_name               : "SeeU Extra",
-            mod_license            : "LicenseRef-SeeU-Restricted-1.0",
+            mod_license            : "MIT",
             mod_version            : project.seeu_extra_version,
     ]
     inputs.properties replaceProperties
