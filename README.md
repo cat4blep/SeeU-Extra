@@ -1,5 +1,3 @@
-![SeeU Extra](docs/banner.png)
-
 # SeeU Extra
 
 SeeU Extra renders configured non-player entities beyond vanilla tracking distance through [SeeU](https://github.com/cat4blep/SeeU). It supports Fabric and NeoForge modded servers. Paper remains player-only.
