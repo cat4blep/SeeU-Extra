@@ -1,0 +1,35 @@
+plugins {
+    id "java-library"
+}
+
+base {
+    archivesName = "seeu-extra-common"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(project.java_version as int)
+    }
+
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+    options.release = project.java_version as int
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}
+
+dependencies {
+    compileOnlyApi "dev.keryeshka.seeu:seeu-addon-api:${project.seeu_release_tag}@jar"
+    compileOnly "io.netty:netty-buffer:${project.netty_version}"
+
+    testImplementation platform("org.junit:junit-bom:5.13.4")
+    testImplementation "org.junit.jupiter:junit-jupiter"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+    testImplementation "dev.keryeshka.seeu:seeu-addon-api:${project.seeu_release_tag}@jar"
+    testImplementation "io.netty:netty-buffer:${project.netty_version}"
+}

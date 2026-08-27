@@ -1,0 +1,73 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-wrapper:
+    name: Validate Gradle Wrapper
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: validate-wrapper
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read Java version
+        id: java
+        shell: bash
+        run: echo "version=$(sed -n 's/^java_version=//p' gradle.properties)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ steps.java.outputs.version }}
+          cache: gradle
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Ensure Gradle wrapper is executable
+        run: chmod +x ./gradlew
+
+      - name: Build
+        run: ./gradlew --no-daemon clean build
+
+      - name: Reject bundled SeeU classes
+        shell: bash
+        run: |
+          for jar_file in fabric/build/libs/*.jar neoforge/build/libs/*.jar; do
+            case "$jar_file" in
+              *-sources.jar) continue ;;
+            esac
+            if unzip -Z1 "$jar_file" | grep -q '^dev/keryeshka/voxyseeu/'; then
+              echo "SeeU classes leaked into $jar_file"
+              exit 1
+            fi
+          done
+
+      - name: Upload JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: seeu-extra-${{ github.ref_name }}
+          if-no-files-found: error
+          path: |
+            fabric/build/libs/*.jar
+            neoforge/build/libs/*.jar
+            !fabric/build/libs/*-sources.jar
+            !neoforge/build/libs/*-sources.jar
