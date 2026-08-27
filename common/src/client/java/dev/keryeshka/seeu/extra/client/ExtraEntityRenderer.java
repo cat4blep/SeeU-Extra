@@ -44,6 +44,7 @@ public final class ExtraEntityRenderer {
     private final Set<String> quarantinedTypes = new HashSet<>();
     private Frustum frustum;
     private long frame;
+    private boolean loggedFirstSubmission;
 
     public ExtraEntityRenderer(ExtraEntityTracker tracker, SeeUExtraClientConfig config) {
         this.tracker = tracker;
@@ -55,6 +56,7 @@ public final class ExtraEntityRenderer {
         quarantinedTypes.clear();
         frustum = null;
         frame = 0;
+        loggedFirstSubmission = false;
     }
 
     public void updateFrustum(Frustum frustum) {
@@ -131,6 +133,14 @@ public final class ExtraEntityRenderer {
                         poseStack,
                         submitNodeCollector
                 );
+                if (!loggedFirstSubmission) {
+                    LOGGER.info(
+                            "Submitted first SeeU Extra proxy: type={}, distance={}",
+                            snapshot.typeId(),
+                            Math.round(Math.sqrt(distanceSquared))
+                    );
+                    loggedFirstSubmission = true;
+                }
             } catch (RuntimeException | LinkageError failure) {
                 quarantine(snapshot.typeId(), failure);
             }
