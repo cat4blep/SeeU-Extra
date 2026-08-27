@@ -1,17 +1,17 @@
-SEEU RESTRICTED USE LICENSE
+SEEU EXTRA RESTRICTED USE LICENSE
 Version 1.0, 13 August 2026
 License identifier: LicenseRef-SeeU-Restricted-1.0
 
 Copyright (c) 2026 cat4blep. All rights reserved.
 
-This License applies only to versions of SeeU that the Licensor expressly
+This License applies only to versions of SeeU Extra that the Licensor expressly
 distributes with this License or identifies as licensed under it. Versions
 previously released under another license remain governed by that license.
 This License does not withdraw permissions already granted for those versions.
 
 1. Definitions
 
-"Software" means the SeeU source code, executable files, assets, and
+"Software" means the SeeU Extra source code, executable files, assets, and
 documentation supplied with a version covered by this License, but only to the
 extent that the Licensor owns or controls the rights in them. Software does not
 include third-party components governed by separate licenses.
@@ -19,13 +19,13 @@ include third-party components governed by separate licenses.
 "Licensor" means the copyright holder identified above.
 
 "Official Build" means an executable JAR that the Licensor publishes through
-an official SeeU distribution page controlled by the Licensor, including the
+an official SeeU Extra distribution page controlled by the Licensor, including the
 official GitHub, Modrinth, or CurseForge project page, and expressly releases
 under this License.
 
 "Pack" means a Minecraft modpack, plugin pack, server pack, or launcher package
 that contains the Software together with other mods, plugins, or configuration
-and is not primarily a substitute for a standalone SeeU download or mirror.
+and is not primarily a substitute for a standalone SeeU Extra download or mirror.
 
 "Prior Written Permission" means explicit permission from the Licensor in a
 signed document, email, or message sent from an account controlled by the
@@ -65,14 +65,14 @@ conditions:
 (a) It must use the byte-for-byte contents of an Official Build. It must not
 patch, repackage, obfuscate, optimize, or otherwise alter the Official Build.
 
-(b) Its description or accompanying notices must identify SeeU and cat4blep,
-link to https://github.com/cat4blep/SeeU, and include this License or a link to
+(b) Its description or accompanying notices must identify SeeU Extra and cat4blep,
+link to https://github.com/cat4blep/SeeU-Extra, and include this License or a link to
 it.
 
-(c) It must not claim authorship of SeeU or imply endorsement by the Licensor.
+(c) It must not claim authorship of SeeU Extra or imply endorsement by the Licensor.
 
-(d) It must not charge a separate fee for SeeU or use the Pack permission to
-operate a standalone download, mirror, or substitute distribution of SeeU.
+(d) It must not charge a separate fee for SeeU Extra or use the Pack permission to
+operate a standalone download, mirror, or substitute distribution of SeeU Extra.
 
 (e) It must comply with the terms of Minecraft, the distribution platform, and
 all third-party components.

@@ -1,13 +1,13 @@
 modLoader="javafml"
 loaderVersion="${loader_version_range}"
 license="${mod_license}"
-issueTrackerURL="https://github.com/cat4blep/SeeU/issues"
+issueTrackerURL="https://github.com/cat4blep/SeeU-Extra/issues"
 
 [[mods]]
 modId="${mod_id}"
 version="${mod_version}"
 displayName="${mod_name}"
-displayURL="https://github.com/cat4blep/SeeU"
+displayURL="https://github.com/cat4blep/SeeU-Extra"
 authors="Keryesh4ka"
 description='''
 Renders configured non-player entities beyond the vanilla tracking range through SeeU.
@@ -30,6 +30,6 @@ Renders configured non-player entities beyond the vanilla tracking range through
 [[dependencies.${mod_id}]]
     modId="seeu"
     type="required"
-    versionRange="[0.9.0,)"
+    versionRange="[0.9.1,1.0.0)"
     ordering="AFTER"
     side="BOTH"
