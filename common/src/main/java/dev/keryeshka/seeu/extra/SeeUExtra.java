@@ -10,7 +10,7 @@ public final class SeeUExtra {
     public static final AddonDescriptor DESCRIPTOR = new AddonDescriptor(
             MOD_ID,
             ExtraProtocol.VERSION,
-            AddonDirection.CLIENTBOUND,
+            AddonDirection.BIDIRECTIONAL,
             ExtraProtocol.MAX_PACKET_BYTES
     );
 

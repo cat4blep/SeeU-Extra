@@ -58,6 +58,20 @@ public final class SeeUExtraServerEndpoint implements ServerAddonEndpoint {
         );
     }
 
+    @Override
+    public void onData(ServerAddonSession session, byte[] payload) {
+        try {
+            ClientOffer offer = ExtraPacketCodec.decodeClientOffer(payload);
+            OpenSession current = sessions.get(session.playerId());
+            if (current == null || current.session() != session || current.offer().equals(offer)) {
+                return;
+            }
+            sessions.put(session.playerId(), new OpenSession(session, offer));
+        } catch (IllegalArgumentException exception) {
+            session.close();
+        }
+    }
+
     public void tick(MinecraftServer server) {
         if (!broadcaster.isEnabled()) {
             return;
