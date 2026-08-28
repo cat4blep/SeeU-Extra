@@ -39,16 +39,14 @@ public final class ExtraEntityRenderer {
     private static final AtomicInteger NEXT_PROXY_ID = new AtomicInteger(1_100_000_000);
 
     private final ExtraEntityTracker tracker;
-    private final SeeUExtraClientConfig config;
     private final Map<UUID, ProxyEntry> proxies = new HashMap<>();
     private final Set<String> quarantinedTypes = new HashSet<>();
     private Frustum frustum;
     private long frame;
     private boolean loggedFirstSubmission;
 
-    public ExtraEntityRenderer(ExtraEntityTracker tracker, SeeUExtraClientConfig config) {
+    public ExtraEntityRenderer(ExtraEntityTracker tracker) {
         this.tracker = tracker;
-        this.config = config;
     }
 
     public void clear() {
@@ -66,12 +64,12 @@ public final class ExtraEntityRenderer {
     public void render(
             PoseStack poseStack,
             LevelRenderState levelRenderState,
-            SubmitNodeCollector submitNodeCollector
+            SubmitNodeCollector submitNodeCollector,
+            ClientOffer offer
     ) {
         Minecraft minecraft = Minecraft.getInstance();
         ClientLevel level = minecraft.level;
         LocalPlayer viewer = minecraft.player;
-        ClientOffer offer = config.offer();
         if (!offer.enabled() || level == null || viewer == null || submitNodeCollector == null) {
             proxies.clear();
             return;
@@ -97,7 +95,13 @@ public final class ExtraEntityRenderer {
             if (distanceSquared < minimumDistanceSquared || distanceSquared > maximumDistanceSquared) {
                 continue;
             }
-            if (level.getEntity(snapshot.uuid()) != null) {
+            Entity vanillaEntity = level.getEntity(snapshot.uuid());
+            if (vanillaEntity != null && isCoveredByVanilla(
+                    dispatcher,
+                    vanillaEntity,
+                    currentFrustum,
+                    cameraPosition
+            )) {
                 proxies.remove(snapshot.uuid());
                 continue;
             }
@@ -106,36 +110,41 @@ public final class ExtraEntityRenderer {
             }
 
             try {
-                ProxyEntry proxy = proxies.get(snapshot.uuid());
-                if (proxy == null || proxy.level != level || !proxy.typeId.equals(snapshot.typeId())) {
-                    proxy = createProxy(level, snapshot);
-                    proxies.put(snapshot.uuid(), proxy);
-                }
-                proxy.lastSeenFrame = currentFrame;
-                applyPosition(proxy.entity, state);
-                if (proxy.appliedRevision != state.revision()) {
-                    applySnapshotState(proxy.entity, snapshot);
-                    proxy.appliedRevision = state.revision();
+                Entity renderEntity = vanillaEntity;
+                if (renderEntity != null) {
+                    proxies.remove(snapshot.uuid());
+                } else {
+                    ProxyEntry proxy = proxies.get(snapshot.uuid());
+                    if (proxy == null || proxy.level != level || !proxy.typeId.equals(snapshot.typeId())) {
+                        proxy = createProxy(level, snapshot);
+                        proxies.put(snapshot.uuid(), proxy);
+                    }
+                    proxy.lastSeenFrame = currentFrame;
+                    applyPosition(proxy.entity, state);
+                    if (proxy.appliedRevision != state.revision()) {
+                        applySnapshotState(proxy.entity, snapshot);
+                        proxy.appliedRevision = state.revision();
+                    }
+                    renderEntity = proxy.entity;
                 }
 
-                if (currentFrustum != null && !currentFrustum.isVisible(proxy.entity.getBoundingBox())) {
+                if (!shouldRenderBeyondVanillaDistance(dispatcher, renderEntity, currentFrustum)) {
                     continue;
                 }
 
-                var renderState = dispatcher.extractEntity(proxy.entity, partialTick);
-                Vec3 position = state.position();
+                var renderState = dispatcher.extractEntity(renderEntity, partialTick);
                 dispatcher.submit(
                         renderState,
                         levelRenderState.cameraRenderState,
-                        position.x - cameraPosition.x,
-                        position.y - cameraPosition.y,
-                        position.z - cameraPosition.z,
+                        renderState.x - cameraPosition.x,
+                        renderState.y - cameraPosition.y,
+                        renderState.z - cameraPosition.z,
                         poseStack,
                         submitNodeCollector
                 );
                 if (!loggedFirstSubmission) {
                     LOGGER.info(
-                            "Submitted first SeeU Extra proxy: type={}, distance={}",
+                            "Submitted first SeeU Extra entity: type={}, distance={}",
                             snapshot.typeId(),
                             Math.round(Math.sqrt(distanceSquared))
                     );
@@ -147,6 +156,38 @@ public final class ExtraEntityRenderer {
         }
 
         proxies.values().removeIf(proxy -> proxy.lastSeenFrame != currentFrame);
+    }
+
+    private static boolean isCoveredByVanilla(
+            EntityRenderDispatcher dispatcher,
+            Entity entity,
+            Frustum frustum,
+            Vec3 cameraPosition
+    ) {
+        if (entity.shouldRender(cameraPosition.x, cameraPosition.y, cameraPosition.z)) {
+            return true;
+        }
+        return frustum != null && dispatcher.shouldRender(
+                entity,
+                frustum,
+                cameraPosition.x,
+                cameraPosition.y,
+                cameraPosition.z
+        );
+    }
+
+    private static boolean shouldRenderBeyondVanillaDistance(
+            EntityRenderDispatcher dispatcher,
+            Entity entity,
+            Frustum frustum
+    ) {
+        return frustum == null || dispatcher.shouldRender(
+                entity,
+                frustum,
+                entity.getX(),
+                entity.getY(),
+                entity.getZ()
+        );
     }
 
     private ProxyEntry createProxy(ClientLevel level, EntitySnapshot snapshot) {

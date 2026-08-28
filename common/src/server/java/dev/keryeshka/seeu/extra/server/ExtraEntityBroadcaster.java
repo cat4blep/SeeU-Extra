@@ -36,7 +36,8 @@ import java.util.UUID;
 public final class ExtraEntityBroadcaster {
     private static final Logger LOGGER = LoggerFactory.getLogger("SeeU Extra");
     private static final Comparator<RankedCandidate> NEAREST_FIRST = Comparator
-            .comparingDouble(RankedCandidate::distanceSquared)
+            .comparing(RankedCandidate::need)
+            .thenComparingDouble(RankedCandidate::distanceSquared)
             .thenComparing(candidate -> candidate.candidate().entity().getUUID());
 
     private ExtraServerSettings settings;
@@ -188,7 +189,8 @@ public final class ExtraEntityBroadcaster {
                     candidates,
                     minimumDistance,
                     maximumDistance,
-                    settings.entityCap()
+                    settings.entityCap(),
+                    offer
             );
             snapshots = new ArrayList<>(nearest.size());
             for (EntityCandidate candidate : nearest) {
@@ -230,7 +232,8 @@ public final class ExtraEntityBroadcaster {
             SpatialCellIndex<EntityCandidate> candidates,
             int minimumDistanceBlocks,
             int maximumDistanceBlocks,
-            int cap
+            int cap,
+            ClientOffer viewerOffer
     ) {
         if (cap <= 0) {
             return List.of();
@@ -246,14 +249,11 @@ public final class ExtraEntityBroadcaster {
                 viewer.getX(),
                 viewer.getZ(),
                 maximumDistanceBlocks,
-                () -> nearest.size() == cap
-                        ? nearest.peek().distanceSquared()
-                        : maximumDistanceSquared,
+                () -> searchDistanceSquared(nearest, cap, maximumDistanceSquared),
                 cellCandidates -> {
                     for (EntityCandidate candidate : cellCandidates) {
                         Entity entity = candidate.entity();
-                        if (!entity.broadcastToPlayer(viewer)
-                                || isTrackedByVanilla(viewer, candidate, vanillaViewDistanceBlocks)) {
+                        if (!entity.broadcastToPlayer(viewer)) {
                             continue;
                         }
 
@@ -262,11 +262,23 @@ public final class ExtraEntityBroadcaster {
                             continue;
                         }
 
+                        VanillaEntityHandoff.SnapshotNeed need = VanillaEntityHandoff.classify(
+                                isTrackedByVanilla(viewer, candidate, vanillaViewDistanceBlocks),
+                                distanceSquared,
+                                entity.getBoundingBox().getSize(),
+                                viewerOffer.entityViewScaleQ10()
+                        );
+                        if (need == VanillaEntityHandoff.SnapshotNeed.NONE) {
+                            continue;
+                        }
+
+                        RankedCandidate ranked = new RankedCandidate(candidate, distanceSquared, need);
+
                         if (nearest.size() < cap) {
-                            nearest.add(new RankedCandidate(candidate, distanceSquared));
-                        } else if (isNearer(candidate, distanceSquared, nearest.peek())) {
+                            nearest.add(ranked);
+                        } else if (isBetter(ranked, nearest.peek())) {
                             nearest.remove();
-                            nearest.add(new RankedCandidate(candidate, distanceSquared));
+                            nearest.add(ranked);
                         }
                     }
                 }
@@ -300,17 +312,20 @@ public final class ExtraEntityBroadcaster {
         return deltaX * deltaX + deltaZ * deltaZ <= square(trackingDistance);
     }
 
-    private static boolean isNearer(
-            EntityCandidate candidate,
-            double distanceSquared,
-            RankedCandidate currentFarthest
+    private static double searchDistanceSquared(
+            PriorityQueue<RankedCandidate> nearest,
+            int cap,
+            double maximumDistanceSquared
     ) {
-        int distanceComparison = Double.compare(distanceSquared, currentFarthest.distanceSquared());
-        if (distanceComparison != 0) {
-            return distanceComparison < 0;
+        if (nearest.size() < cap
+                || nearest.peek().need() == VanillaEntityHandoff.SnapshotNeed.PREFETCH) {
+            return maximumDistanceSquared;
         }
-        return candidate.entity().getUUID()
-                .compareTo(currentFarthest.candidate().entity().getUUID()) < 0;
+        return nearest.peek().distanceSquared();
+    }
+
+    private static boolean isBetter(RankedCandidate candidate, RankedCandidate currentWorst) {
+        return NEAREST_FIRST.compare(candidate, currentWorst) < 0;
     }
 
     private static int vanillaTrackingRangeBlocks(MinecraftServer server, Entity entity) {
@@ -432,6 +447,10 @@ public final class ExtraEntityBroadcaster {
     private record EntityCandidate(Entity entity, String typeId, int vanillaTrackingRangeBlocks) {
     }
 
-    private record RankedCandidate(EntityCandidate candidate, double distanceSquared) {
+    private record RankedCandidate(
+            EntityCandidate candidate,
+            double distanceSquared,
+            VanillaEntityHandoff.SnapshotNeed need
+    ) {
     }
 }

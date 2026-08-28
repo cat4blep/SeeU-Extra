@@ -2,7 +2,7 @@
 
 SeeU Extra renders configured non-player entities beyond vanilla tracking distance through [SeeU](https://github.com/cat4blep/SeeU). It supports Fabric and NeoForge modded servers. Paper remains player-only.
 
-Install matching SeeU and SeeU Extra builds on the server and every client. SeeU Extra 0.1.1 requires SeeU 0.9.1 or later in the 0.x line. Downloads are available on the [releases page](https://github.com/cat4blep/SeeU-Extra/releases).
+Install matching SeeU and SeeU Extra builds on the server and every client. SeeU Extra 0.1.1 and later require SeeU 0.9.1 or later in the 0.x line. Client and server builds of SeeU Extra must use the same version. Downloads are available on the [releases page](https://github.com/cat4blep/SeeU-Extra/releases).
 
 ## Configuration
 
@@ -29,6 +29,8 @@ The server creates `config/seeu-extra-server.json`. Its default mode is `DISABLE
 ```
 
 The client creates `config/seeu-extra-client.json` with its enable switch and distance limits. The server uses the lower maximum distance and the higher minimum distance from the two configurations. Restart the client or server after editing either file.
+
+The handoff from vanilla rendering follows the player's active Render Distance and Entity Distance settings. Sodium and Reese's Sodium Options use the same Minecraft settings, so changes made through their video screens are applied automatically without reconnecting.
 
 ## Limits
 
