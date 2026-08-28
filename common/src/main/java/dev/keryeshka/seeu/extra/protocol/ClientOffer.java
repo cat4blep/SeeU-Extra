@@ -4,7 +4,8 @@ public record ClientOffer(
         int protocolVersion,
         boolean enabled,
         int maximumDistanceBlocks,
-        int minimumDistanceBlocks
+        int minimumDistanceBlocks,
+        int entityViewScaleQ10
 ) {
     public ClientOffer {
         if (protocolVersion != ExtraProtocol.VERSION) {
@@ -15,6 +16,10 @@ public record ClientOffer(
         }
         if (minimumDistanceBlocks < 0 || minimumDistanceBlocks > maximumDistanceBlocks) {
             throw new IllegalArgumentException("Minimum distance exceeds the maximum distance");
+        }
+        if (entityViewScaleQ10 < ExtraProtocol.MIN_ENTITY_VIEW_SCALE_Q10
+                || entityViewScaleQ10 > ExtraProtocol.MAX_ENTITY_VIEW_SCALE_Q10) {
+            throw new IllegalArgumentException("Entity view scale is outside the supported range");
         }
     }
 }

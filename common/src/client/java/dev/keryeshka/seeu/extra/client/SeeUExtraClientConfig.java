@@ -4,7 +4,9 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import dev.keryeshka.seeu.extra.config.ExtraServerSettings;
 import dev.keryeshka.seeu.extra.protocol.ClientOffer;
+import dev.keryeshka.seeu.extra.protocol.EntityViewScale;
 import dev.keryeshka.seeu.extra.protocol.ExtraProtocol;
+import net.minecraft.client.Minecraft;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -39,11 +41,17 @@ public final class SeeUExtraClientConfig {
 
     public ClientOffer offer() {
         sanitize();
+        Minecraft minecraft = Minecraft.getInstance();
+        int entityViewScaleQ10 = EntityViewScale.fromOptions(
+                minecraft.options.getEffectiveRenderDistance(),
+                minecraft.options.entityDistanceScaling().get()
+        );
         return new ClientOffer(
                 ExtraProtocol.VERSION,
                 enabled,
                 maximumDistanceBlocks,
-                minimumDistanceBlocks
+                minimumDistanceBlocks,
+                entityViewScaleQ10
         );
     }
 
