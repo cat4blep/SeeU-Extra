@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ExtraPacketCodecTest {
     @Test
     void clientOfferRoundTrips() {
-        ClientOffer offer = new ClientOffer(ExtraProtocol.VERSION, true, 4096, 128);
+        ClientOffer offer = new ClientOffer(ExtraProtocol.VERSION, true, 4096, 128, 1536);
 
         assertEquals(offer, ExtraPacketCodec.decodeClientOffer(ExtraPacketCodec.encodeClientOffer(offer)));
     }
@@ -39,7 +39,7 @@ class ExtraPacketCodecTest {
     @Test
     void decoderRejectsTrailingBytes() {
         byte[] encoded = ExtraPacketCodec.encodeClientOffer(
-                new ClientOffer(ExtraProtocol.VERSION, true, 4096, 128)
+                new ClientOffer(ExtraProtocol.VERSION, true, 4096, 128, 1536)
         );
         byte[] withTrailingByte = Arrays.copyOf(encoded, encoded.length + 1);
 
@@ -50,11 +50,11 @@ class ExtraPacketCodecTest {
     void decoderRejectsNonCanonicalVarIntAndBoolean() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> ExtraPacketCodec.decodeClientOffer(new byte[]{(byte) 0x81, 0, 1, 0, 0})
+                () -> ExtraPacketCodec.decodeClientOffer(new byte[]{(byte) 0x82, 0, 1, 0, 0, 0})
         );
         assertThrows(
                 IllegalArgumentException.class,
-                () -> ExtraPacketCodec.decodeClientOffer(new byte[]{1, 2, 0, 0})
+                () -> ExtraPacketCodec.decodeClientOffer(new byte[]{2, 2})
         );
     }
 
@@ -62,7 +62,27 @@ class ExtraPacketCodecTest {
     void boundsRejectInvalidRangesAndSnapshotCounts() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> new ClientOffer(ExtraProtocol.VERSION, true, 100, 101)
+                () -> new ClientOffer(ExtraProtocol.VERSION, true, 100, 101, 1024)
+        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new ClientOffer(
+                        ExtraProtocol.VERSION,
+                        true,
+                        100,
+                        0,
+                        ExtraProtocol.MIN_ENTITY_VIEW_SCALE_Q10 - 1
+                )
+        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new ClientOffer(
+                        ExtraProtocol.VERSION,
+                        true,
+                        100,
+                        0,
+                        ExtraProtocol.MAX_ENTITY_VIEW_SCALE_Q10 + 1
+                )
         );
         assertThrows(
                 IllegalArgumentException.class,

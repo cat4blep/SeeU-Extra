@@ -16,12 +16,13 @@ public final class ExtraPacketCodec {
     }
 
     public static byte[] encodeClientOffer(ClientOffer offer) {
-        ByteBuf buffer = Unpooled.buffer(16);
+        ByteBuf buffer = Unpooled.buffer(20);
         try {
             writeVarInt(buffer, offer.protocolVersion());
             writeBoolean(buffer, offer.enabled());
             writeVarInt(buffer, offer.maximumDistanceBlocks());
             writeVarInt(buffer, offer.minimumDistanceBlocks());
+            writeVarInt(buffer, offer.entityViewScaleQ10());
             return copyPayload(buffer);
         } finally {
             buffer.release();
@@ -34,6 +35,7 @@ public final class ExtraPacketCodec {
             ClientOffer offer = new ClientOffer(
                     readVarInt(buffer),
                     readBoolean(buffer),
+                    readVarInt(buffer),
                     readVarInt(buffer),
                     readVarInt(buffer)
             );
